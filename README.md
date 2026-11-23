@@ -84,7 +84,7 @@ Everything except the Claude call runs on your Mac.
 ## Install
 
 ```zsh
-git clone https://github.com/<your-username>/real-jarvis.git ~/Jarvis
+git clone https://github.com/erkinazizi/Real-Jarvis.git ~/Jarvis
 cd ~/Jarvis
 ./install.sh      # Python 3.12, dependencies, local models, Ollama + Qwen3, builds Jarvis.app
 ./login.sh        # type /login, sign in to Claude in the browser, then /exit
