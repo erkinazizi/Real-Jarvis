@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Jarvis Settings</title>
+<style>
+  :root {
+    --bg: #ececec; --sidebar: rgba(232,232,236,.92); --content: #f5f5f7; --card: #ffffff;
+    --text: #1d1d1f; --muted: #6e6e73; --hair: rgba(0,0,0,.09); --field: #ffffff; --field-line: rgba(0,0,0,.14);
+    --seg-track: rgba(118,118,128,.12); --seg-on: #ffffff; --seg-shadow: 0 1px 3px rgba(0,0,0,.14), 0 0 0 .5px rgba(0,0,0,.06);
+    --blue: #007aff; --green: #34c759; --sel: #007aff; --sel-text: #fff; --toggle-off: rgba(120,120,128,.24);
+    --banner: rgba(255,255,255,.86);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1e; --sidebar: rgba(40,40,42,.95); --content: #1e1e1e; --card: #2a2a2c;
+      --text: #f5f5f7; --muted: #98989d; --hair: rgba(255,255,255,.09); --field: #3a3a3c; --field-line: rgba(255,255,255,.12);
+      --seg-track: rgba(118,118,128,.24); --seg-on: #636366; --seg-shadow: 0 1px 2px rgba(0,0,0,.35);
+      --blue: #0a84ff; --green: #30d158; --sel: #0a84ff; --toggle-off: rgba(120,120,128,.32);
+      --banner: rgba(42,42,44,.9);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; display: flex; background: var(--bg); color: var(--text);
+         font: 13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+         -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+
+  /* ---- sidebar ---- */
+  aside { width: 220px; flex: none; background: var(--sidebar); border-right: 1px solid var(--hair);
+          padding: 18px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .me { display: flex; align-items: center; gap: 10px; padding: 4px 8px 14px; }
+  .me img { width: 40px; height: 40px; border-radius: 10px; }
+  .me .name { font-weight: 600; font-size: 14px; }
+  .me .sub { color: var(--muted); font-size: 11px; }
+  .search { position: relative; margin: 0 2px 10px; }
+  .search input { width: 100%; height: 28px; border-radius: 7px; border: none; padding: 0 8px 0 26px;
+                  background: var(--seg-track); color: var(--text); font: inherit; outline: none; }
+  .search input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 35%, transparent); }
+  .search svg { position: absolute; left: 8px; top: 7px; width: 14px; height: 14px; opacity: .55; }
+  .nav { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 7px; cursor: default;
+         font-size: 13px; }
+  .nav:hover { background: var(--hair); }
+  .nav.on { background: var(--sel); color: var(--sel-text); }
+  .ico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; flex: none;
+         box-shadow: inset 0 0 0 .5px rgba(0,0,0,.08); }
+  .ico svg { width: 14px; height: 14px; fill: #fff; }
+
+  /* ---- content ---- */
+  main { flex: 1; overflow-y: auto; background: var(--content); padding: 22px 28px 90px; }
+  main h1 { font-size: 22px; font-weight: 700; margin: 4px 0 18px; letter-spacing: -.01em;
+            display: flex; align-items: center; gap: 10px; }
+  main h1 .ico { width: 28px; height: 28px; border-radius: 7px; }
+  main h1 .ico svg { width: 17px; height: 17px; }
+  .group-title { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase;
+                 letter-spacing: .04em; margin: 20px 10px 6px; }
+  .card { background: var(--card); border-radius: 10px; box-shadow: 0 0 0 .5px var(--hair), 0 1px 2px rgba(0,0,0,.04);
+          overflow: hidden; margin-bottom: 18px; }
+  .row { display: flex; align-items: center; gap: 16px; min-height: 44px; padding: 9px 14px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--hair); }
+  .row.hidden { display: none; }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .label { font-size: 13px; }
+  .row .help { color: var(--muted); font-size: 11.5px; margin-top: 2px; line-height: 1.35; }
+  .ctl { display: flex; align-items: center; gap: 8px; flex: none; }
+
+  /* controls */
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+  .switch span { position: absolute; inset: 0; border-radius: 22px; background: var(--toggle-off); transition: background .2s; }
+  .switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+                        background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25), 0 0 0 .5px rgba(0,0,0,.04);
+                        transition: transform .22s cubic-bezier(.3,1.4,.5,1); }
+  .switch input:checked + span { background: var(--green); }
+  .switch input:checked + span::after { transform: translateX(16px); }
+
+  .seg { display: inline-flex; background: var(--seg-track); border-radius: 8px; padding: 2px; gap: 2px; }
+  .seg button { border: none; background: transparent; color: var(--text); font: inherit; font-size: 12px;
+                padding: 4px 11px; border-radius: 6px; cursor: default; white-space: nowrap; }
+  .seg button.on { background: var(--seg-on); box-shadow: var(--seg-shadow); font-weight: 500; }
+
+  .popup { position: relative; }
+  .popup select { appearance: none; -webkit-appearance: none; font: inherit; color: var(--text);
+                  background: var(--field); border: none; border-radius: 6px; height: 24px; padding: 0 26px 0 9px;
+                  box-shadow: 0 0 0 .5px var(--field-line), 0 1px 1.5px rgba(0,0,0,.06); outline: none; max-width: 230px; }
+  .popup::after { content: ""; position: absolute; right: 4px; top: 4px; width: 16px; height: 16px; border-radius: 4px;
+                  background: var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 6.5l3-3 3 3M5 9.5l3 3 3-3' fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;
+                  pointer-events: none; }
+  input[type=text], input[type=number] { font: inherit; color: var(--text); background: var(--field); border: none;
+                  border-radius: 6px; height: 24px; padding: 0 8px; width: 190px; text-align: right; outline: none;
+                  box-shadow: 0 0 0 .5px var(--field-line), 0 1px 1.5px rgba(0,0,0,.06); }
+  input[type=number] { width: 80px; }
+  input[type=text]:focus, input[type=number]:focus, .popup select:focus {
+                  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--blue) 40%, transparent); }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 170px; height: 4px; border-radius: 4px;
+                  background: linear-gradient(var(--blue), var(--blue)) 0/var(--p, 50%) 100% no-repeat, var(--toggle-off); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+                  background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3), 0 0 0 .5px rgba(0,0,0,.06); }
+  .val { min-width: 62px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .btn { font: inherit; font-size: 12px; color: var(--text); background: var(--field); border: none; border-radius: 6px;
+         height: 24px; padding: 0 11px; box-shadow: 0 0 0 .5px var(--field-line), 0 1px 1.5px rgba(0,0,0,.06); }
+  .btn:active { filter: brightness(.94); }
+  .btn.blue { background: var(--blue); color: #fff; box-shadow: none; font-weight: 500; padding: 0 14px; }
+
+  /* restart banner */
+  .banner { position: fixed; left: 236px; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px 10px 16px; border-radius: 12px; background: var(--banner); backdrop-filter: blur(20px);
+            box-shadow: 0 0 0 .5px var(--hair), 0 8px 30px rgba(0,0,0,.16);
+            transform: translateY(140%); transition: transform .35s cubic-bezier(.2,1.2,.4,1); }
+  .banner.show { transform: none; }
+  .banner .msg { flex: 1; font-size: 12.5px; }
+  .banner .msg b { font-weight: 600; }
+  .search input[type=text] { width: 100%; padding: 0 8px 0 26px; text-align: left; background: var(--seg-track);
+                             box-shadow: none; height: 28px; border-radius: 7px; }
+  .empty { color: var(--muted); text-align: center; margin-top: 60px; }
+</style>
+</head>
+<body>
+<aside>
+  <div class="me">
+    <img src="../assets/icon.png" alt="">
+    <div><div class="name">Jarvis</div><div class="sub">Voice assistant</div></div>
+  </div>
+  <div class="search">
+    <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input id="q" type="text" placeholder="Search">
+  </div>
+  <nav id="nav"></nav>
+</aside>
+<main id="main"></main>
+<div class="banner" id="banner">
+  <div class="msg"><b>Saved.</b> Restart Jarvis to apply the changes.</div>
+  <button class="btn blue" id="restart">Restart Jarvis</button>
+</div>
+
+<script>
+const ICONS = {
+  "General":     ["#8e8e93", '<path d="M8 5.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zm6.3 3.6l-1.4.3a5 5 0 01-.6 1.4l.8 1.2-1.3 1.3-1.2-.8c-.4.3-.9.5-1.4.6l-.3 1.4H7.1l-.3-1.4a5 5 0 01-1.4-.6l-1.2.8-1.3-1.3.8-1.2a5 5 0 01-.6-1.4l-1.4-.3V7.1l1.4-.3c.1-.5.3-1 .6-1.4l-.8-1.2 1.3-1.3 1.2.8c.4-.3.9-.5 1.4-.6l.3-1.4h1.8l.3 1.4c.5.1 1 .3 1.4.6l1.2-.8 1.3 1.3-.8 1.2c.3.4.5.9.6 1.4l1.4.3v1.8z"/>'],
+  "Personality": ["#ff2d55", '<path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM5.6 6a1 1 0 112 0 1 1 0 01-2 0zm2.8 0a1 1 0 112 0 1 1 0 01-2 0zM8 12a3.6 3.6 0 01-3.3-2.2h6.6A3.6 3.6 0 018 12z"/>'],
+  "Voice":       ["#ff9500", '<path d="M2 6h2.5L8 3v10L4.5 10H2zM10 5.2a4 4 0 010 5.6l-.9-.9a2.7 2.7 0 000-3.8zm1.8-1.8a6.5 6.5 0 010 9.2l-.9-.9a5.2 5.2 0 000-7.4z"/>'],
+  "AI brain":    ["#af52de", '<path d="M6.5 1l1.2 3.3L11 5.5 7.7 6.7 6.5 10 5.3 6.7 2 5.5l3.3-1.2zM12 8.5l.7 1.8 1.8.7-1.8.7L12 13.5l-.7-1.8-1.8-.7 1.8-.7z"/>'],
+  "Listening":   ["#007aff", '<path d="M8 1.5a2.3 2.3 0 012.3 2.3v4a2.3 2.3 0 01-4.6 0v-4A2.3 2.3 0 018 1.5zM3.8 7.5h1.3a2.9 2.9 0 005.8 0h1.3a4.2 4.2 0 01-3.6 4.1V14H7.4v-2.4a4.2 4.2 0 01-3.6-4.1z"/>'],
+  "Orb":         ["#32ade6", '<circle cx="8" cy="8" r="5.5"/>'],
+  "Advanced":    ["#636366", '<path d="M13.6 4.3l-2.2 2.2-1.9-.4-.4-1.9 2.2-2.2a3.5 3.5 0 00-4.6 4.5L1.9 11.3a1.4 1.4 0 002 2l4.8-4.8a3.5 3.5 0 004.9-4.2z"/>'],
+};
+let schema = [], values = {}, voices = [], current = "General", saveTimer = null;
+
+const icon = (s) => { const [c, p] = ICONS[s] || ["#8e8e93", '<circle cx="8" cy="8" r="5"/>'];
+  return `<span class="ico" style="background:${c}"><svg viewBox="0 0 16 16">${p}</svg></span>`; };
+const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+function control(f) {
+  const v = values[f.key];
+  switch (f.type) {
+    case "bool":
+      return `<label class="switch"><input type="checkbox" data-key="${f.key}" ${v ? "checked" : ""}><span></span></label>`;
+    case "segmented":
+      return `<div class="seg" data-seg="${f.key}">${f.options.map(([val, txt]) =>
+        `<button data-val="${esc(val)}" class="${String(v) === String(val) ? "on" : ""}">${txt}</button>`).join("")}</div>`;
+    case "select":
+      return `<div class="popup"><select data-key="${f.key}">${f.options.map(([val, txt]) =>
+        `<option value="${esc(val)}" ${String(v) === String(val) ? "selected" : ""}>${txt}</option>`).join("")}</select></div>`;
+    case "voice": {
+      const loc = f.lang === "tr" ? "tr_" : "en_";
+      const mine = voices.filter(x => x.locale.startsWith(loc)), other = voices.filter(x => !x.locale.startsWith(loc));
+      const opt = x => `<option value="${esc(x.name)}" ${v === x.name ? "selected" : ""}>${x.name}</option>`;
+      const known = !v || v === "system" || voices.some(x => x.name === v);
+      return `<button class="btn" data-preview="${f.lang}">Play</button>
+        <div class="popup"><select data-key="${f.key}">
+          <option value="system" ${!v || v === "system" ? "selected" : ""}>System Voice</option>
+          ${known ? "" : `<option value="${esc(v)}" selected>${v}</option>`}
+          <optgroup label="${f.lang === "tr" ? "Turkish" : "English"}">${mine.map(opt).join("")}</optgroup>
+          <optgroup label="Other languages">${other.map(opt).join("")}</optgroup>
+        </select></div>`;
+    }
+    case "range":
+      return `<input type="range" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" value="${v}">
+              <span class="val" data-val="${f.key}"></span>`;
+    case "number":
+      return `<input type="number" data-key="${f.key}" min="${f.min}" max="${f.max}" value="${v}">`;
+    default:
+      return `<input type="text" data-key="${f.key}" value="${esc(v)}">`;
+  }
+}
+
+const row = (f) => `<div class="row" data-row="${f.key}">
+    <div class="txt"><div class="label">${f.label}</div>${f.help ? `<div class="help">${f.help}</div>` : ""}</div>
+    <div class="ctl">${control(f)}</div></div>`;
+
+function renderNav() {
+  const sections = [...new Set(schema.map(f => f.section))];
+  document.getElementById("nav").innerHTML = sections.map(s =>
+    `<div class="nav ${s === current ? "on" : ""}" data-sec="${esc(s)}">${icon(s)}<span>${s}</span></div>`).join("");
+  document.querySelectorAll(".nav").forEach(n => n.onclick = () => {
+    current = n.dataset.sec; document.getElementById("q").value = ""; render(); });
+}
+
+function render() {
+  renderNav();
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const main = document.getElementById("main");
+  if (q) {
+    const hits = schema.filter(f => (f.label + " " + (f.help || "") + " " + f.section).toLowerCase().includes(q));
+    const secs = [...new Set(hits.map(f => f.section))];
+    main.innerHTML = `<h1>Search results</h1>` + (secs.length ? secs.map(s =>
+      `<div class="group-title">${s}</div><div class="card">${hits.filter(f => f.section === s).map(row).join("")}</div>`).join("")
+      : `<div class="empty">No settings match “${esc(q)}”.</div>`);
+    document.querySelectorAll(".nav").forEach(n => n.classList.remove("on"));
+  } else {
+    main.innerHTML = `<h1>${icon(current)}${current}</h1>
+      <div class="card">${schema.filter(f => f.section === current).map(row).join("")}</div>`;
+  }
+  bind();
+  refresh();
+}
+
+function bind() {
+  document.querySelectorAll("[data-key]").forEach(el => el.addEventListener("input", () => {
+    values[el.dataset.key] = el.type === "checkbox" ? el.checked
+      : (el.type === "range" || el.type === "number") ? Number(el.value) : el.value;
+    changed(el.type !== "range" && el.type !== "text");
+  }));
+  document.querySelectorAll("[data-seg]").forEach(seg => seg.querySelectorAll("button").forEach(b => b.onclick = () => {
+    seg.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    values[seg.dataset.seg] = b.dataset.val;
+    changed(true);
+  }));
+  document.querySelectorAll("[data-preview]").forEach(b => b.onclick = preview);
+}
+
+function refresh() {
+  schema.forEach(f => {
+    const r = document.querySelector(`[data-row="${f.key}"]`);
+    if (!r) return;
+    const show = !f.show_if || Object.entries(f.show_if).every(([k, want]) => values[k] === want);
+    r.classList.toggle("hidden", !show);
+    const lab = document.querySelector(`[data-val="${f.key}"]`);
+    if (lab) lab.textContent = `${values[f.key]}${f.unit ? " " + f.unit.replace("words/min", "wpm") : ""}`;
+    const rng = document.querySelector(`input[type=range][data-key="${f.key}"]`);
+    if (rng) rng.style.setProperty("--p", `${(values[f.key] - f.min) / (f.max - f.min) * 100}%`);
+  });
+}
+
+function changed(rerenderVisibility) {
+  refresh();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {          // save automatically, like System Settings
+    await pywebview.api.save(values);
+    document.getElementById("banner").classList.add("show");
+  }, 350);
+}
+
+async function preview(ev) {
+  const lang = ev.target.dataset.preview;
+  await pywebview.api.preview(lang, lang === "tr" ? "mac" : values.EN_ENGINE,
+    lang === "tr" ? values.TR_MAC_VOICE : values.EN_MAC_VOICE,
+    lang === "tr" ? values.TR_MAC_RATE : values.EN_MAC_RATE);
+}
+
+document.getElementById("q").addEventListener("input", render);
+document.getElementById("restart").onclick = async () => {
+  document.querySelector("#banner .msg").innerHTML = "<b>Restarting Jarvis…</b>";
+  await pywebview.api.save_and_restart(values);
+};
+
+window.addEventListener("pywebviewready", async () => {
+  [schema, values, voices] = await Promise.all([
+    pywebview.api.get_schema(), pywebview.api.get_values(), pywebview.api.get_voices()]);
+  current = schema[0].section;
+  render();
+});
+</script>
+</body>
+</html>

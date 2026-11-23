@@ -1,0 +1,14 @@
+claude-agent-sdk>=0.2
+mlx-whisper
+kokoro>=0.9
+misaki[en]
+piper-tts
+openwakeword
+onnxruntime
+silero-vad
+torch
+sounddevice
+numpy
+requests
+huggingface_hub
+pywebview>=5.0

@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# downloaded models (setup_models.py fetches them)
+models/
+
+# personal: your settings, logs, recordings, action history
+settings.json
+logs/
+*.wav
+
+# macOS
+.DS_Store

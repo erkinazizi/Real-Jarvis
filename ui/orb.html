@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden;
+               width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
+  #wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+          opacity: 0; transform: scale(0.4) translateY(30px);
+          transition: opacity .35s ease, transform .45s cubic-bezier(.2, 1.4, .4, 1); cursor: pointer; }
+  #wrap.on { opacity: 1; transform: scale(1) translateY(0); }
+  canvas { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<script>
+// Jarvis orb. Python calls setState('hidden'|'listening'|'thinking'|'speaking') and setLevel(0..1).
+const wrap = document.getElementById('wrap');
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+
+const PALETTES = {
+  listening: [[0, 210, 255], [40, 110, 255], [110, 240, 230]],
+  thinking:  [[150, 80, 255], [80, 60, 240], [230, 90, 230]],
+  speaking:  [[0, 200, 255], [170, 80, 255], [255, 90, 170]],
+  hidden:    [[60, 120, 255], [150, 80, 255], [0, 200, 255]],
+};
+const BLOBS = [
+  { sp: 0.9, ph: 0.0, r: 1.00 },
+  { sp: 1.3, ph: 2.1, r: 0.90 },
+  { sp: 0.7, ph: 4.2, r: 0.95 },
+];
+
+let state = 'hidden';
+let level = 0, target = 0, t = 0, spin = 0;
+let colors = PALETTES.hidden.map(c => c.slice());
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  c.width = Math.round(c.clientWidth * dpr);
+  c.height = Math.round(c.clientHeight * dpr);
+}
+window.addEventListener('resize', resize);
+resize();
+
+window.setState = (s) => {
+  state = s in PALETTES ? s : 'hidden';
+  wrap.classList.toggle('on', state !== 'hidden');
+};
+window.setLevel = (v) => { target = Math.max(target, Math.min(1, v)); };
+
+wrap.addEventListener('click', () => {
+  if (window.pywebview && window.pywebview.api) window.pywebview.api.activate();
+});
+
+function rgba(col, a) { return `rgba(${col[0] | 0},${col[1] | 0},${col[2] | 0},${a})`; }
+
+function frame() {
+  const dt = 1 / 60;
+  t += dt;
+  level += (target - level) * 0.3;
+  target *= 0.88;
+
+  // ease colours toward the current state's palette
+  const pal = PALETTES[state];
+  for (let i = 0; i < 3; i++)
+    for (let k = 0; k < 3; k++) colors[i][k] += (pal[i][k] - colors[i][k]) * 0.06;
+
+  const W = c.width, H = c.height, cx = W / 2, cy = H / 2;
+  const base = Math.min(W, H) * 0.28;
+  let scale = 1;
+  if (state === 'thinking') scale = 1 + 0.05 * Math.sin(t * 3.2);
+  else if (state === 'listening') scale = 1 + 0.03 * Math.sin(t * 2) + level * 0.35;
+  else if (state === 'speaking') scale = 1 + level * 0.28;
+  const R = base * scale;
+  spin += dt * (state === 'thinking' ? 2.6 : state === 'speaking' ? 1.4 + level * 2 : 0.8);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // outer glow
+  const GR = Math.min(R * 1.65, Math.min(W, H) / 2);      // glow never reaches the window edge
+  const glow = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, GR);
+  glow.addColorStop(0, rgba(colors[0], 0.35 + level * 0.25));
+  glow.addColorStop(1, rgba(colors[1], 0));
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx, cy, GR, 0, Math.PI * 2); ctx.fill();
+
+  // orb body
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = '#07081a';
+  ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+  ctx.globalCompositeOperation = 'lighter';
+  BLOBS.forEach((b, i) => {
+    const a = spin * b.sp + b.ph;
+    const wob = 0.42 + 0.08 * Math.sin(t * 1.7 + i);
+    const bx = cx + Math.cos(a) * R * wob;
+    const by = cy + Math.sin(a * 1.21) * R * wob;
+    const br = R * b.r * (1.05 + level * 0.3);
+    const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+    g.addColorStop(0, rgba(colors[i], 0.95));
+    g.addColorStop(0.55, rgba(colors[i], 0.35));
+    g.addColorStop(1, rgba(colors[i], 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+  });
+  // glossy highlight
+  ctx.globalCompositeOperation = 'source-over';
+  const hl = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.45, 0, cx - R * 0.35, cy - R * 0.45, R * 0.9);
+  hl.addColorStop(0, 'rgba(255,255,255,0.35)');
+  hl.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = hl;
+  ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+  ctx.restore();
+
+  // rim
+  ctx.lineWidth = Math.max(1, W / 160);
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// preview in a normal browser: open orb.html#demo
+if (location.hash === '#demo') {
+  document.body.style.background = '#2b2d31';
+  const seq = ['listening', 'thinking', 'speaking'];
+  let n = 0; setState(seq[0]);
+  setInterval(() => setState(seq[++n % 3]), 2500);
+  setInterval(() => setLevel(Math.random()), 90);
+}
+</script>
+</body>
+</html>
