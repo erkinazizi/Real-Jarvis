@@ -112,6 +112,15 @@
   .banner .msg b { font-weight: 600; }
   .search input[type=text] { width: 100%; padding: 0 8px 0 26px; text-align: left; background: var(--seg-track);
                              box-shadow: none; height: 28px; border-radius: 7px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #8e8e93; flex: none; }
+  .dot.on { background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent); }
+  .dot.bad { background: #ff3b30; }
+  input[type=password] { font: inherit; color: var(--text); background: var(--field); border: none; border-radius: 6px;
+                  height: 24px; padding: 0 8px; width: 200px; outline: none;
+                  box-shadow: 0 0 0 .5px var(--field-line), 0 1px 1.5px rgba(0,0,0,.06); }
+  input[type=password]:focus { box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--blue) 40%, transparent); }
+  .help a { color: var(--blue); text-decoration: none; cursor: pointer; }
+  .help.ok { color: var(--green); } .help.err { color: #ff3b30; }
   .empty { color: var(--muted); text-align: center; margin-top: 60px; }
 </style>
 </head>
@@ -136,6 +145,7 @@
 <script>
 const ICONS = {
   "General":     ["#8e8e93", '<path d="M8 5.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zm6.3 3.6l-1.4.3a5 5 0 01-.6 1.4l.8 1.2-1.3 1.3-1.2-.8c-.4.3-.9.5-1.4.6l-.3 1.4H7.1l-.3-1.4a5 5 0 01-1.4-.6l-1.2.8-1.3-1.3.8-1.2a5 5 0 01-.6-1.4l-1.4-.3V7.1l1.4-.3c.1-.5.3-1 .6-1.4l-.8-1.2 1.3-1.3 1.2.8c.4-.3.9-.5 1.4-.6l.3-1.4h1.8l.3 1.4c.5.1 1 .3 1.4.6l1.2-.8 1.3 1.3-.8 1.2c.3.4.5.9.6 1.4l1.4.3v1.8z"/>'],
+  "Claude account": ["#d97757", '<path d="M6.6 9.4a2.6 2.6 0 003.7 0l2.4-2.4a2.6 2.6 0 00-3.7-3.7l-1 1 .9.9 1-1a1.3 1.3 0 011.9 1.9L9.4 8.5a1.3 1.3 0 01-1.9 0zM9.4 6.6a2.6 2.6 0 00-3.7 0L3.3 9a2.6 2.6 0 003.7 3.7l1-1-.9-.9-1 1a1.3 1.3 0 01-1.9-1.9l2.4-2.4a1.3 1.3 0 011.9 0z"/>'],
   "Personality": ["#ff2d55", '<path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM5.6 6a1 1 0 112 0 1 1 0 01-2 0zm2.8 0a1 1 0 112 0 1 1 0 01-2 0zM8 12a3.6 3.6 0 01-3.3-2.2h6.6A3.6 3.6 0 018 12z"/>'],
   "Voice":       ["#ff9500", '<path d="M2 6h2.5L8 3v10L4.5 10H2zM10 5.2a4 4 0 010 5.6l-.9-.9a2.7 2.7 0 000-3.8zm1.8-1.8a6.5 6.5 0 010 9.2l-.9-.9a5.2 5.2 0 000-7.4z"/>'],
   "AI brain":    ["#af52de", '<path d="M6.5 1l1.2 3.3L11 5.5 7.7 6.7 6.5 10 5.3 6.7 2 5.5l3.3-1.2zM12 8.5l.7 1.8 1.8.7-1.8.7L12 13.5l-.7-1.8-1.8-.7 1.8-.7z"/>'],
@@ -208,10 +218,12 @@ function render() {
     document.querySelectorAll(".nav").forEach(n => n.classList.remove("on"));
   } else {
     main.innerHTML = `<h1>${icon(current)}${current}</h1>
-      <div class="card">${schema.filter(f => f.section === current).map(row).join("")}</div>`;
+      <div class="card">${schema.filter(f => f.section === current).map(row).join("")}</div>
+      ${current === "Claude account" ? '<div class="card" id="claudeCard"></div>' : ""}`;
   }
   bind();
   refresh();
+  if (document.getElementById("claudeCard")) { renderClaude(); if (!claude) loadClaude(); }
 }
 
 function bind() {
@@ -224,6 +236,7 @@ function bind() {
     seg.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
     values[seg.dataset.seg] = b.dataset.val;
     changed(true);
+    if (seg.dataset.seg === "AUTH_MODE") renderClaude();
   }));
   document.querySelectorAll("[data-preview]").forEach(b => b.onclick = preview);
 }
@@ -255,6 +268,75 @@ async function preview(ev) {
   await pywebview.api.preview(lang, lang === "tr" ? "mac" : values.EN_ENGINE,
     lang === "tr" ? values.TR_MAC_VOICE : values.EN_MAC_VOICE,
     lang === "tr" ? values.TR_MAC_RATE : values.EN_MAC_RATE);
+}
+
+// ---- Claude connection -------------------------------------------------------
+let claude = null, polling = null;
+const api = () => pywebview.api;
+async function loadClaude() { claude = await api().claude_status(); renderClaude(); }
+function msg(t, cls = "") { const m = document.getElementById("cMsg"); if (m) { m.textContent = t; m.className = "help " + cls; } }
+
+function renderClaude() {
+  const el = document.getElementById("claudeCard");
+  if (!el) return;
+  if (!claude) { el.innerHTML = '<div class="row"><div class="txt"><div class="label">Checking connection…</div></div></div>'; return; }
+  const a = claude.account || {};
+  let h = "";
+  if (values.AUTH_MODE !== "api_key") {
+    const ok = a.loggedIn && a.authMethod !== "none";
+    const who = a.email || a.emailAddress || (a.account && a.account.email) || "";
+    const plan = a.subscriptionType || a.plan || "";
+    const sub = ok ? ([plan && "Plan: " + plan, a.orgName].filter(Boolean).join(" · ") || "Claude account")
+                   : "Sign in with your Claude Pro or Max account.";
+    h += `<div class="row"><span class="dot ${ok ? "on" : ""}"></span>
+      <div class="txt"><div class="label">${ok ? "Signed in" + (who ? " as " + esc(who) : "") : "Not signed in"}</div>
+      <div class="help">${esc(sub)}</div></div>
+      <div class="ctl">${ok ? '<button class="btn" id="cOut">Sign Out</button>' : '<button class="btn blue" id="cIn">Sign In…</button>'}</div></div>`;
+    if (!ok) h += `<div class="row"><div class="txt"><div class="help">A browser window opens to sign in.
+      Didn’t open? <a id="cTerm">Sign in from Terminal</a></div></div></div>`;
+  } else {
+    h += `<div class="row"><span class="dot ${claude.api_key ? "on" : ""}"></span>
+      <div class="txt"><div class="label">${claude.api_key ? "API key saved" : "No API key"}</div>
+      <div class="help">${claude.api_key ? esc(claude.api_key) + " · stored in your Mac’s Keychain"
+                                         : "Create one at console.anthropic.com › API Keys."}</div></div>
+      ${claude.api_key ? '<div class="ctl"><button class="btn" id="kDel">Remove</button></div>' : ""}</div>
+      <div class="row"><div class="txt"><div class="label">${claude.api_key ? "Replace key" : "API key"}</div></div>
+      <div class="ctl"><input type="password" id="kIn" placeholder="sk-ant-…"><button class="btn blue" id="kSave">Save</button></div></div>`;
+  }
+  h += `<div class="row"><div class="txt"><div class="label">Connection</div>
+      <div class="help" id="cMsg">${esc(claude.error || "Check that Jarvis can reach Claude with these settings.")}</div></div>
+      <div class="ctl"><button class="btn" id="cTest">Test Connection</button></div></div>`;
+  el.innerHTML = h;
+
+  const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
+  on("cIn", async () => {
+    await api().claude_sign_in(false);
+    msg("Finish signing in in your browser…");
+    clearInterval(polling);
+    let n = 0;
+    polling = setInterval(async () => {
+      const s = await api().claude_status();
+      if ((s.account && s.account.loggedIn) || ++n > 90) {
+        clearInterval(polling); claude = s; renderClaude();
+        if (s.account && s.account.loggedIn) { msg("Signed in. Restart Jarvis to use this account.", "ok");
+                                              document.getElementById("banner").classList.add("show"); }
+      }
+    }, 2000);
+  });
+  on("cTerm", () => api().claude_sign_in_terminal());
+  on("cOut", async () => { await api().claude_sign_out(); await loadClaude(); msg("Signed out."); });
+  on("kSave", async () => {
+    const r = await api().save_api_key(document.getElementById("kIn").value);
+    if (!r.ok) return msg(r.message, "err");
+    await loadClaude(); msg("Key saved to your Keychain. Restart Jarvis to use it.", "ok");
+    document.getElementById("banner").classList.add("show");
+  });
+  on("kDel", async () => { await api().remove_api_key(); await loadClaude(); msg("Key removed."); });
+  on("cTest", async () => {
+    msg("Testing… (a few seconds)");
+    const r = await api().test_connection(values);
+    msg((r.ok ? "✓ " : "✗ ") + r.message, r.ok ? "ok" : "err");
+  });
 }
 
 document.getElementById("q").addEventListener("input", render);

@@ -63,6 +63,7 @@ TR_PIPER_MODEL = MODELS_DIR / "tr_TR-dfki-medium.onnx"
 # --- Brain ---------------------------------------------------------------
 WORKDIR = Path.home()                         # where Jarvis runs commands
 SAFE_DIR = Path.home() / "Jarvis-Workspace"   # writes here need no approval
+AUTH_MODE = "account"                         # "account" = Claude Pro/Max sign-in, "api_key" = key in Keychain
 CLAUDE_MODEL = "haiku"                        # fastest. "sonnet" = smarter but slower, None = default (Opus)
 CLAUDE_MAX_TURNS = 25                         # max tool steps per request
 

@@ -17,6 +17,7 @@ from claude_agent_sdk import (
     ToolUseBlock,
 )
 
+import claude_auth
 import config
 import persona
 
@@ -87,6 +88,7 @@ class Brain:
             setting_sources=[],
             include_partial_messages=True,        # stream tokens so Jarvis starts talking early
             thinking={"type": "disabled"},
+            env=claude_auth.brain_env(),          # Claude account sign-in, or the API key from Keychain
         )
         self.client = ClaudeSDKClient(options=options)
         await self.client.connect()

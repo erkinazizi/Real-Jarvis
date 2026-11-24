@@ -32,6 +32,10 @@ SCHEMA: list[dict] = [
     dict(key="LANGUAGE", section="General", label="Default language", type="segmented",
          options=[["tr", "Türkçe"], ["en", "English"]],
          help="Used for greetings and when the spoken language is unclear."),
+    # Claude account
+    dict(key="AUTH_MODE", section="Claude account", label="Connect with", type="segmented",
+         options=[["account", "Claude account"], ["api_key", "API key"]],
+         help="Claude account = your Pro/Max subscription. API key = pay-as-you-go from console.anthropic.com."),
     # Personality
     dict(key="TONE", section="Personality", label="Tone", type="segmented",
          options=[["formal", "Formal"], ["polite", "Polite"], ["friendly", "Friendly"], ["casual", "Casual"]],
@@ -167,6 +171,47 @@ class SettingsApi:
             cmd[1:1] = ["-v", voice]
         subprocess.Popen(cmd)
         return ""
+
+    # -- Claude connection --------------------------------------------------------
+    def claude_status(self):
+        import claude_auth
+        return claude_auth.status()
+
+    def claude_sign_in(self, console=False):
+        import claude_auth
+        claude_auth.sign_in(bool(console))
+        return True
+
+    def claude_sign_in_terminal(self):
+        import claude_auth
+        claude_auth.sign_in_in_terminal()
+        return True
+
+    def claude_sign_out(self):
+        import claude_auth
+        claude_auth.sign_out()
+        return True
+
+    def save_api_key(self, key):
+        import claude_auth
+        try:
+            return {"ok": True, "masked": claude_auth.save_api_key(key)}
+        except Exception as e:
+            return {"ok": False, "message": str(e)}
+
+    def remove_api_key(self):
+        import claude_auth
+        claude_auth.remove_api_key()
+        return True
+
+    def test_connection(self, values=None):
+        import claude_auth
+        if values:                                   # test with what's on screen right now
+            save(values)
+            for k in ("AUTH_MODE", "CLAUDE_MODEL"):
+                if k in values:
+                    setattr(config, k, values[k])
+        return claude_auth.test_connection()
 
     def save_and_restart(self, values):
         save(values)

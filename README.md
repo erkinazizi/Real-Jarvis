@@ -87,7 +87,7 @@ Everything except the Claude call runs on your Mac.
 git clone https://github.com/erkinazizi/Real-Jarvis.git ~/Jarvis
 cd ~/Jarvis
 ./install.sh      # Python 3.12, dependencies, local models, Ollama + Qwen3, builds Jarvis.app
-./login.sh        # type /login, sign in to Claude in the browser, then /exit
+./login.sh        # sign in to Claude (or later: Settings › Claude account)
 ```
 
 Then, in **System Settings → Privacy & Security**, allow **Microphone**, **Accessibility** and **Automation**
@@ -123,6 +123,7 @@ All options live in the Settings window and are saved to `settings.json` (defaul
 | Section | Options |
 |---|---|
 | General | your name, default language |
+| Claude account | sign in with your Claude Pro/Max account or save an API key (kept in the macOS Keychain), test the connection |
 | Personality | tone (formal · polite · friendly · casual), humour (none · light · witty) |
 | Voice | Turkish / English voice, speed, macOS or Kokoro engine, ▶ preview |
 | AI brain | Claude model (Haiku · Sonnet · Opus), max tool steps, offline fallback model |
