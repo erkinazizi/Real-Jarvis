@@ -15,6 +15,11 @@ HALLUCINATIONS = re.compile(
 )
 
 
+# words that make Jarvis stop talking (said over its voice), besides its name
+STOP_WORDS = re.compile(r"\b(stop|wait|enough|quiet|shut up|hold on|dur|bekle|sus|yeter|tamam tamam|kes)\b", re.I)
+NAME_ANYWHERE = re.compile(r"(?:^|\W)(?:j|c|ç|dj|g|ch)[aeə]r?[vw][iıeüu][sşz](?![\w])", re.I)
+
+
 class Transcriber:
     def __init__(self):
         # warm-up (both code paths) so the first real command is fast
@@ -51,6 +56,25 @@ class Transcriber:
         if len(text) < 2 or HALLUCINATIONS.match(text):
             return "", lang
         return text, lang
+
+    def heard_interrupt(self, audio, own_text: str = "") -> bool:
+        """While Jarvis talks: did the user say "Jarvis" or a stop word over it?
+        Words that are in Jarvis's own sentence don't count (its voice comes back into the mic)."""
+        result = self._run(audio, prompt=None)
+        text = result.get("text", "").strip()
+        own = own_text.lower()
+        name = NAME_ANYWHERE.search(text) and not NAME_ANYWHERE.search(own)
+        stop = STOP_WORDS.search(text)
+        stop = stop and stop.group(0).lower() not in own
+        if config.DEBUG_WAKE and text:
+            print(f"[barge] heard {text!r} -> {'STOP' if (name or stop) else 'ignored'}")
+        return bool(name or stop)
+
+    @staticmethod
+    def is_stop_only(text: str) -> bool:
+        """'Dur.' / 'Stop!' / 'Jarvis, bekle' - nothing to do except listen."""
+        rest = STOP_WORDS.sub("", NAME.sub("", text, count=1)).strip(" ,.!?")
+        return bool(STOP_WORDS.search(text)) and len(rest) < 3
 
     def spot_name(self, audio) -> tuple[str, str] | None:
         """Was this short phrase addressed to Jarvis?  Returns (command after the name, lang) or None.

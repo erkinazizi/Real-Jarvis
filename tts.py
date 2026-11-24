@@ -18,6 +18,7 @@ import config
 
 
 def clean_for_speech(text: str) -> str:
+    text = re.sub(r"\[lang=\w+\]", " ", text)               # internal language tag
     text = re.sub(r"```.*?```", " ", text, flags=re.S)        # drop code blocks
     text = re.sub(r"`([^`]*)`", r"\1", text)
     text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)       # [label](url) -> label
@@ -51,6 +52,10 @@ class Voice:
         self._proc: subprocess.Popen | None = None
 
     # -- interrupt (barge-in) ----------------------------------------------------
+    @property
+    def speaking(self) -> bool:
+        return self._proc is not None and self._proc.poll() is None
+
     @property
     def interrupted(self) -> bool:
         return self._interrupt.is_set()

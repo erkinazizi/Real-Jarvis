@@ -183,7 +183,8 @@ class Ears:
                 self._reset_vad()
 
     def watch_for_barge_in(self, playback_level: Callable[[], float], stop: threading.Event,
-                           on_barge: Callable[[], None], use_wake: bool = True) -> bool:
+                           on_barge: Callable[[], None], use_wake: bool = True,
+                           check: Callable[[np.ndarray], bool] | None = None) -> bool:
         """Runs while Jarvis speaks. If you start talking (or say "Jarvis"), calls on_barge() and
         returns True; your first words are kept for the next recording. Jarvis's own voice also
         reaches the mic, so speech only counts when it is clearly louder than that echo."""
@@ -192,6 +193,10 @@ class Ears:
         recent = collections.deque(maxlen=int(1.5 * config.SAMPLE_RATE / FRAME))
         need = max(1, math.ceil(config.BARGE_SPEECH_SEC * config.SAMPLE_RATE / FRAME))
         run, t0, calib = 0, time.time(), 0.0
+        # spoken interrupt ("Jarvis" / "dur" / "stop"): collect short phrases and let Whisper check them
+        seg: list[np.ndarray] = []
+        seg_speech, seg_silence = False, 0.0
+        frame_sec = FRAME / config.SAMPLE_RATE
         while not stop.is_set():
             try:
                 frame = self.q.get(timeout=0.05)
@@ -221,6 +226,22 @@ class Ears:
                 self._reset_wake()
                 on_barge()
                 return True
+
+            if check is not None:
+                if prob > 0.5:
+                    seg_speech, seg_silence = True, 0.0
+                elif seg_speech:
+                    seg_silence += frame_sec
+                if seg_speech:
+                    seg.append(frame)
+                if seg_speech and (seg_silence >= 0.25 or len(seg) * frame_sec >= 1.6):
+                    audio = np.concatenate(seg).astype(np.float32) / 32768.0
+                    seg, seg_speech, seg_silence = [], False, 0.0
+                    if len(audio) >= 0.3 * config.SAMPLE_RATE and not stop.is_set() and check(audio):
+                        self._preroll = []          # the phrase is mixed with Jarvis's voice: start fresh
+                        self._reset_wake()
+                        on_barge()
+                        return True
         return False
 
     def record_utterance(self, start_timeout: float = 5.0):

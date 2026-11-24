@@ -76,7 +76,8 @@ SCHEMA: list[dict] = [
     dict(key="BARGE_IN", section="Listening", label="Interrupt Jarvis while it talks", type="bool"),
     dict(key="BARGE_SPEECH_SEC", section="Listening", label="Talk this long to interrupt", type="range",
          min=0.3, max=60, step=0.1, unit="s", show_if={"BARGE_IN": True},
-         help="60 = only saying “Jarvis” interrupts (Jarvis's own voice can trigger short values)."),
+         help="60 = only words interrupt: “Jarvis”, “dur”, “bekle”, “stop”, “wait” (or click the orb). "
+              "Short values stop on any speech — best with headphones, or Jarvis's own voice may trigger it."),
     # Orb
     dict(key="SHOW_ORB", section="Orb", label="Show the animated orb", type="bool"),
     dict(key="ORB_CORNER", section="Orb", label="Position", type="select", show_if={"SHOW_ORB": True},

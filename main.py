@@ -58,12 +58,12 @@ class Jarvis:
         stop = threading.Event()
         watcher = asyncio.create_task(asyncio.to_thread(
             self.ears.watch_for_barge_in, self.voice.playback_level, stop, self.voice.interrupt,
-            "jarvis" not in text.lower()))
+            "jarvis" not in text.lower(), lambda audio: self.stt.heard_interrupt(audio, text)))
         try:
             await asyncio.to_thread(self.voice.say, text, lang)
         finally:
             stop.set()
-            barged = await watcher
+            barged = await watcher or self.voice.interrupted     # (or the orb / menu was clicked)
         if barged:
             print("✋ Interrupted - listening")
         return barged
@@ -105,6 +105,13 @@ class Jarvis:
             self.voice.reset_interrupt()     # what you said is picked up by the next listen()
         self.ui.set_state("thinking")
 
+    def on_click(self) -> None:
+        """Orb / menu-bar "Talk to Jarvis": stop talking and listen, or wake up."""
+        if self.voice.speaking:
+            self.voice.interrupt()
+        else:
+            self.ears.manual.set()
+
     async def listen(self, start_timeout: float = 5.0) -> tuple[str, str]:
         self.ui.set_state("listening")
         audio = await asyncio.to_thread(self.ears.record_utterance, start_timeout)
@@ -130,7 +137,7 @@ class Jarvis:
         """Returns False when Jarvis should shut down."""
         self.voice.reset_interrupt()
         m = NAME.match(text)
-        if m and not text[m.end():].strip():
+        if (m and not text[m.end():].strip()) or self.stt.is_stop_only(text):
             # just "Jarvis": Whisper often tags this one word as English -> keep the current language
             print(f"🎤 You: {text}")
             self.ui.set_state("speaking")
@@ -240,7 +247,7 @@ def main() -> None:
     from overlay import Overlay
 
     holder: dict = {}
-    overlay = Overlay(on_click=lambda: holder["jarvis"].ears.manual.set() if "jarvis" in holder else None)
+    overlay = Overlay(on_click=lambda: holder["jarvis"].on_click() if "jarvis" in holder else None)
 
     def backend() -> None:                      # runs in a background thread
         overlay.ready.wait(timeout=10)

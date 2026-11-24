@@ -37,7 +37,7 @@ Jarvis: You're at 95 percent, about seven hours left.
 - 🧠 **Claude brain** — uses the Claude Agent SDK to really *do* things on your Mac, not just chat
 - ⚡ **Fast** — instant answers for simple commands (time, volume, opening apps) without any AI call; Claude's
   answers are streamed and spoken sentence by sentence
-- ✋ **Interruptible** — say “Jarvis” while it talks to cut it off
+- ✋ **Interruptible** — say “Jarvis” / “dur” / “stop” (or click the orb) while it talks to cut it off
 - 🔮 **Animated orb** — a ChatGPT-voice-style orb in the corner: blue = listening, purple = thinking, pink = speaking
 - 🎭 **Adjustable personality** — from a formal British butler (“Yes, sir?”) to a casual friend who uses your first name
 - ⚙️ **Apple-style settings** — voice, language, AI model, sensitivity, personality and more, from the menu bar
@@ -103,7 +103,7 @@ for Jarvis (macOS asks the first time).
 | Start | Open **Jarvis** from Launchpad / Spotlight (or `./run.sh` to see logs in Terminal) |
 | Talk | “Hey Jarvis” / “Jarvis”, wait for the reply, then speak. Or click the orb. |
 | Follow-up | After each answer Jarvis keeps listening a few seconds — no wake word needed |
-| Interrupt | Say “Jarvis” while it talks |
+| Interrupt | While it talks, say “Jarvis”, “dur”, “bekle”, “stop” or “wait” — or click the orb |
 | Settings | Menu-bar icon → **Settings…**, or say “open settings” / “ayarları aç” |
 | Quit | “Goodbye Jarvis” / “Görüşürüz”, or menu-bar icon → **Quit** |
 | Autostart | `./autostart.sh on` (off: `./autostart.sh off`) |
